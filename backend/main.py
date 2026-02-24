@@ -18,6 +18,19 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# Разрешаем запросы с твоего домена Vercel
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://timeshweet.vercel.app"], # Ссылка на твой фронтенд
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # --- Security Config ---
 SECRET_KEY = "super-secret-key-for-mvp" # In production, use environment variable
 ALGORITHM = "HS256"
