@@ -1,4 +1,7 @@
-export const apiFetch = async (url: string, options: RequestInit = {}) => {
+// Получаем адрес бэкенда из переменных окружения Vercel или используем локальный для разработки
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     const token = localStorage.getItem('token');
     const headers = new Headers(options.headers || {});
 
@@ -6,10 +9,15 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
         headers.set('Authorization', `Bearer ${token}`);
     }
 
-    const response = await fetch(url, { ...options, headers });
+    // Склеиваем базу и эндпоинт. 
+    // Если endpoint уже начинается с http, используем его как есть, иначе добавляем базу.
+    const fullUrl = endpoint.startsWith('http')
+        ? endpoint
+        : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
-    if (response.status === 401 && !url.includes('/auth/login')) {
-        // Token expired or invalid, force logout
+    const response = await fetch(fullUrl, { ...options, headers });
+
+    if (response.status === 401 && !fullUrl.includes('/auth/login')) {
         localStorage.removeItem('token');
         window.location.reload();
     }
