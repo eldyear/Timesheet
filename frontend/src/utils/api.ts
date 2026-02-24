@@ -15,6 +15,8 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
         ? endpoint
         : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
+    console.log("DEBUG: Отправляю запрос на:", fullUrl);
+
     const response = await fetch(fullUrl, { ...options, headers });
 
     if (response.status === 401 && !fullUrl.includes('/auth/login')) {
