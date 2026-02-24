@@ -1,5 +1,6 @@
 // Получаем адрес бэкенда из переменных окружения Vercel или используем локальный для разработки
 // const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = 'https://timesheet-1gzd.onrender.com';
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     const token = localStorage.getItem('token');
