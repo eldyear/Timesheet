@@ -5,12 +5,17 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true, // Listen on all local IPs
+    host: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        // Этот прокси будет работать ТОЛЬКО когда ты пишешь npm run dev
       }
     }
+  },
+  // Добавляем, чтобы Vite понимал переменные окружения Vercel
+  define: {
+    'process.env': {}
   }
 })
