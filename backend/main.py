@@ -22,6 +22,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+from database import init_db
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
 # Разрешаем запросы с твоего домена Vercel
 app.add_middleware(
     CORSMiddleware,
