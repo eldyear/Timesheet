@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
@@ -17,7 +18,7 @@ export default function LoginPage() {
             formData.append('username', username);
             formData.append('password', password);
 
-            const res = await fetch('/api/auth/login', {
+            const res = await apiFetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData.toString()
