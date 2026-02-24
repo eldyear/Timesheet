@@ -18,7 +18,7 @@ interface AuditLog { id: number; username: string; action: string; target: strin
 
 interface EmployeePayroll {
     employee_id: number; full_name: string; tab_number: string; position: string; category: number;
-    dept_id: number; dept_name: string; hourly_rate: number;
+    dept_id: number; dept_name: string; service_id: number; service_name: string; hourly_rate: number;
     std_hours: number; night_hours: number; total_hours: number; gross_pay: number;
 }
 
@@ -125,8 +125,38 @@ export default function FinanceDashboard() {
         if (res.ok) loadRates();
     };
 
-    const handleExport = () => {
-        window.open(`/api/finance/payroll/${month}/export`, '_blank');
+    const handleExport = async () => {
+        try {
+            const res = await apiFetch(`/api/finance/payroll/${month}/export`);
+            if (!res.ok) {
+                alert('Export failed. You may not have permission to export this page.');
+                return;
+            }
+            const blob = await res.blob();
+            const contentDisposition = res.headers.get('Content-Disposition');
+            let filename = `Payroll_${month}.xlsx`;
+
+            if (contentDisposition) {
+                // Handle UTF-8 encoded filenames if present
+                const match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i) ||
+                    contentDisposition.match(/filename="?([^";]+)"?/i);
+                if (match && match[1]) {
+                    filename = decodeURIComponent(match[1]);
+                }
+            }
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Export error:", err);
+            alert("Network error. Could not export Excel file.");
+        }
     };
 
     const navTabs: { key: 'overview' | 'rates' | 'journal'; label: string }[] = [
@@ -248,40 +278,40 @@ export default function FinanceDashboard() {
                                         </thead>
                                         {(() => {
                                             const grouped = payroll.employees.reduce((acc, emp) => {
-                                                const key = emp.dept_name || 'Unknown';
+                                                const key = emp.service_name || 'Unknown';
                                                 if (!acc[key]) acc[key] = [];
                                                 acc[key].push(emp);
                                                 return acc;
                                             }, {} as Record<string, EmployeePayroll[]>);
 
-                                            return Object.entries(grouped).map(([deptName, emps]) => (
-                                                <tbody key={deptName} className="divide-y divide-slate-100">
-                                                    {/* Department Header Row */}
-                                                    <tr className="bg-slate-100/80 border-t-2 border-slate-200">
+                                            return Object.entries(grouped).map(([serviceName, emps]) => (
+                                                <tbody key={serviceName} className="divide-y divide-slate-100">
+                                                    {/* Service Header Row */}
+                                                    <tr className="bg-slate-100 border-t-2 border-slate-200">
                                                         <td colSpan={7} className="px-4 py-2 text-sm font-bold text-slate-800 uppercase tracking-wide">
-                                                            {deptName}
+                                                            SERVICE: {serviceName}
                                                         </td>
                                                     </tr>
-                                                    {/* Employees in Department sorted by category */}
-                                                    {emps
-                                                        .sort((a, b) => (a.category ?? 99) - (b.category ?? 99))
-                                                        .map(emp => (
-                                                            <tr key={emp.employee_id} className="hover:bg-slate-50 transition-colors">
-                                                                <td className="px-4 py-3">
-                                                                    <div className="font-medium text-slate-900">{emp.full_name}</div>
-                                                                    <div className="text-xs text-slate-400">{emp.tab_number}</div>
-                                                                </td>
-                                                                <td className="px-4 py-3 text-slate-600">
-                                                                    {emp.position}
-                                                                    {emp.category < 99 && <span className="ml-2 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">Tier {emp.category}</span>}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-slate-600 font-mono">{emp.hourly_rate > 0 ? fmt(emp.hourly_rate) : <span className="text-slate-300">—</span>}</td>
-                                                                <td className="px-4 py-3 text-slate-600">{emp.std_hours}</td>
-                                                                <td className="px-4 py-3 text-slate-600">{emp.night_hours > 0 ? <span className="text-indigo-600 font-medium">{emp.night_hours}</span> : emp.night_hours}</td>
-                                                                <td className="px-4 py-3 font-semibold text-slate-700">{emp.total_hours}</td>
-                                                                <td className="px-4 py-3 font-bold text-emerald-700">{emp.gross_pay > 0 ? fmt(emp.gross_pay) : <span className="text-slate-300 font-normal">—</span>}</td>
-                                                            </tr>
-                                                        ))}
+                                                    {emps.map(emp => (
+                                                        <tr key={emp.employee_id} className="hover:bg-slate-50 transition-colors">
+                                                            <td className="px-4 py-3">
+                                                                <div className="font-medium text-slate-900">{emp.full_name}</div>
+                                                                <div className="text-xs text-slate-400">{emp.tab_number}</div>
+                                                                {emp.dept_name !== emp.service_name && (
+                                                                    <div className="text-[10px] text-indigo-500 font-medium mt-0.5">{emp.dept_name}</div>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-slate-600">
+                                                                {emp.position}
+                                                                {emp.category < 99 && <span className="ml-2 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">Tier {emp.category}</span>}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-slate-600 font-mono">{emp.hourly_rate > 0 ? fmt(emp.hourly_rate) : <span className="text-slate-300">—</span>}</td>
+                                                            <td className="px-4 py-3 text-slate-600">{emp.std_hours}</td>
+                                                            <td className="px-4 py-3 text-slate-600">{emp.night_hours > 0 ? <span className="text-indigo-600 font-medium">{emp.night_hours}</span> : emp.night_hours}</td>
+                                                            <td className="px-4 py-3 font-semibold text-slate-700">{emp.total_hours}</td>
+                                                            <td className="px-4 py-3 font-bold text-emerald-700">{emp.gross_pay > 0 ? fmt(emp.gross_pay) : <span className="text-slate-300 font-normal">—</span>}</td>
+                                                        </tr>
+                                                    ))}
                                                 </tbody>
                                             ));
                                         })()}

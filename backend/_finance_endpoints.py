@@ -13,6 +13,18 @@ def _require_finance_edit(current_user: models.User = Depends(get_current_user))
         raise HTTPException(status_code=403, detail="Finance edit permission required")
     return current_user
 
+def _get_root_service(db: Session, dept_id: int):
+    """Climbs up the department tree to find the first ancestor with category=1 (Service)."""
+    current_dept = db.query(models.Department).filter(models.Department.id == dept_id).first()
+    while current_dept:
+        if current_dept.category == 1:
+            return current_dept
+        if current_dept.parent_id is None:
+            break
+        current_dept = db.query(models.Department).filter(models.Department.id == current_dept.parent_id).first()
+    return None
+
+
 def _write_audit(db: Session, user: models.User, action: str, target: str,
                  old_value: str = None, new_value: str = None):
     log = models.FinanceAuditLog(
@@ -106,11 +118,17 @@ def get_payroll(year_month: str, db: Session = Depends(get_db),
                 total_night += wc.hours_night
                 gross_pay += (wc.hours_standard + wc.hours_night) * rate * m
         dept_name = emp.department.name if emp.department else "Unknown"
-        pos_name = emp.position.name if emp.position else "\u2014"
+        service = _get_root_service(db, emp.dept_id)
+        service_name = service.name if service else dept_name
+        service_id = service.id if service else emp.dept_id
+
+        pos_name = emp.position.name if emp.position else "—"
         rows.append({
             "employee_id": emp.id, "full_name": emp.full_name,
             "tab_number": emp.tab_number, "position": pos_name,
+            "category": emp.category,
             "dept_id": emp.dept_id, "dept_name": dept_name,
+            "service_id": service_id, "service_name": service_name,
             "hourly_rate": rate,
             "std_hours": round(total_std, 1), "night_hours": round(total_night, 1),
             "total_hours": round(total_std + total_night, 1),
@@ -120,6 +138,7 @@ def get_payroll(year_month: str, db: Session = Depends(get_db),
             dept_totals[emp.dept_id] = {"dept_name": dept_name, "total_pay": 0.0, "employees": 0}
         dept_totals[emp.dept_id]["total_pay"] += gross_pay
         dept_totals[emp.dept_id]["employees"] += 1
+    rows.sort(key=lambda x: (x["service_name"], x["dept_name"], x["category"]))
     grand_total = sum(r["gross_pay"] for r in rows)
     avg_salary = round(grand_total / len(rows), 2) if rows else 0.0
     dept_summary = [{"dept_id": did, **info, "total_pay": round(info["total_pay"], 2)}
@@ -138,6 +157,7 @@ def export_payroll_excel(year_month: str, db: Session = Depends(get_db),
                          current_user: models.User = Depends(_require_finance_view)):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
     payroll = get_payroll(year_month, db, current_user)
     wb = Workbook()
     ws = wb.active
@@ -146,6 +166,8 @@ def export_payroll_excel(year_month: str, db: Session = Depends(get_db),
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
     hf = Font(bold=True, color="FFFFFF")
     hfill = PatternFill(fill_type="solid", fgColor="4F46E5")
+    sfill = PatternFill(fill_type="solid", fgColor="E2E8F0")
+    sfont = Font(bold=True)
     alt = PatternFill(fill_type="solid", fgColor="F1F5F9")
     hdrs = ["#", "Tab No.", "Full Name", "Position", "Department",
             "Rate/hr", "Std Hrs", "Night Hrs", "Total Hrs", "Gross Pay"]
@@ -154,17 +176,30 @@ def export_payroll_excel(year_month: str, db: Session = Depends(get_db),
         cell = ws.cell(row=1, column=c)
         cell.font = hf; cell.fill = hfill
         cell.alignment = Alignment(horizontal="center"); cell.border = border
+    
+    current_service = None
+    row_ptr = 2
     for i, emp in enumerate(payroll["employees"], 1):
+        if emp["service_name"] != current_service:
+            current_service = emp["service_name"]
+            ws.append([f"SERVICE: {current_service}"])
+            ws.merge_cells(start_row=row_ptr, start_column=1, end_row=row_ptr, end_column=10)
+            cell = ws.cell(row=row_ptr, column=1)
+            cell.font = sfont; cell.fill = sfill; cell.border = border; cell.alignment = Alignment(horizontal="left")
+            row_ptr += 1
+
         rdata = [i, emp["tab_number"], emp["full_name"], emp["position"], emp["dept_name"],
                  emp["hourly_rate"], emp["std_hours"], emp["night_hours"],
                  emp["total_hours"], emp["gross_pay"]]
         ws.append(rdata)
         fill = alt if i % 2 == 0 else None
         for c in range(1, len(rdata) + 1):
-            cell = ws.cell(row=i + 1, column=c)
+            cell = ws.cell(row=row_ptr, column=c)
             cell.border = border
             if fill: cell.fill = fill
             if c == 10: cell.number_format = '#,##0.00'
+        row_ptr += 1
+
     tr = ws.max_row + 1
     ws.cell(tr, 1, "TOTAL").font = Font(bold=True)
     tc = ws.cell(tr, 10, payroll["grand_total"])
