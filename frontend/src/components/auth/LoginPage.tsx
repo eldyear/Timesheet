@@ -10,65 +10,65 @@ export default function LoginPage() {
     const { login } = useAuth();
     const { t } = useTranslation();
 
-    // const handleSubmit = async (e: React.FormEvent) => {
-    //     e.preventDefault();
-    //     setError('');
-    //     try {
-    //         const formData = new URLSearchParams();
-    //         formData.append('username', username);
-    //         formData.append('password', password);
-
-    //         const res = await apiFetch('/api/auth/login', {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    //             body: formData.toString()
-    //         });
-
-    //         if (!res.ok) {
-    //             throw new Error(t('auth.error'));
-    //         }
-
-    //         const data = await res.json();
-    //         // The AuthContext useEffect handles decoding the token and setting the actual user state
-    //         login(data.access_token, { username: '', role: { id: 0, name: '', can_manage_settings: false, can_edit_all: false, can_view_all: false, can_view_only: true, can_view_finance: false, can_edit_finance: false, can_export: false, can_manage_employees: false, can_manage_users: false, can_manage_departments: false }, dept_id: null });
-    //     } catch (err: any) {
-    //         setError(err.message);
-    //     }
-    // };
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-
-        // ПРЯМО ЗДЕСЬ, жестко и без функций:
-        const TEST_URL = "https://timesheet-1gzd.onrender.com/api/auth/login";
-        console.log("Я ПЫТАЮСЬ ОТПРАВИТЬ НА:", TEST_URL);
-
         try {
             const formData = new URLSearchParams();
             formData.append('username', username);
             formData.append('password', password);
 
-            console.log("Отправляю данные:", formData.toString());
-            alert("Я ОБНОВИЛСЯ!");
-            const res = await fetch(TEST_URL, {  // Используем TEST_URL
+            const res = await apiFetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData.toString()
             });
 
             if (!res.ok) {
-                // Читаем тело ошибки, чтобы понять, что говорит сервер
-                const errorText = await res.text();
-                console.error("ОШИБКА СЕРВЕРА:", errorText);
                 throw new Error(t('auth.error'));
             }
 
             const data = await res.json();
+            // The AuthContext useEffect handles decoding the token and setting the actual user state
             login(data.access_token, { username: '', role: { id: 0, name: '', can_manage_settings: false, can_edit_all: false, can_view_all: false, can_view_only: true, can_view_finance: false, can_edit_finance: false, can_export: false, can_manage_employees: false, can_manage_users: false, can_manage_departments: false }, dept_id: null });
         } catch (err: any) {
             setError(err.message);
         }
     };
+    // const handleSubmit = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     setError('');
+
+    //     // ПРЯМО ЗДЕСЬ, жестко и без функций:
+    //     const TEST_URL = "https://timesheet-1gzd.onrender.com/api/auth/login";
+    //     console.log("Я ПЫТАЮСЬ ОТПРАВИТЬ НА:", TEST_URL);
+
+    //     try {
+    //         const formData = new URLSearchParams();
+    //         formData.append('username', username);
+    //         formData.append('password', password);
+
+    //         console.log("Отправляю данные:", formData.toString());
+    //         alert("Я ОБНОВИЛСЯ!");
+    //         const res = await fetch(TEST_URL, {  // Используем TEST_URL
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    //             body: formData.toString()
+    //         });
+
+    //         if (!res.ok) {
+    //             // Читаем тело ошибки, чтобы понять, что говорит сервер
+    //             const errorText = await res.text();
+    //             console.error("ОШИБКА СЕРВЕРА:", errorText);
+    //             throw new Error(t('auth.error'));
+    //         }
+
+    //         const data = await res.json();
+    //         login(data.access_token, { username: '', role: { id: 0, name: '', can_manage_settings: false, can_edit_all: false, can_view_all: false, can_view_only: true, can_view_finance: false, can_edit_finance: false, can_export: false, can_manage_employees: false, can_manage_users: false, can_manage_departments: false }, dept_id: null });
+    //     } catch (err: any) {
+    //         setError(err.message);
+    //     }
+    // };
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
