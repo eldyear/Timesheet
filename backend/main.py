@@ -20,7 +20,7 @@ from jose import JWTError, jwt
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+app = FastAPI(title="Timesheet API")
 
 from database import init_db
 
@@ -28,10 +28,15 @@ from database import init_db
 def on_startup():
     init_db()
 
-# Разрешаем запросы с твоего домена Vercel
+# Разрешаем запросы с домена Vercel и локального хоста
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://timeshweet.vercel.app"], # Ссылка на твой фронтенд
+    allow_origins=[
+        "https://timeshweet.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "*" # Временно оставляем для MVP, если origins выше не сработают
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,17 +86,6 @@ def _run_startup_migrations():
                 conn.rollback()
 
 _run_startup_migrations()
-
-app = FastAPI(title="Timesheet API")
-
-# Add CORS for React frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # Allow all for MVP
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # --- Pydantic Schemas ---
 class DepartmentCreate(BaseModel):
