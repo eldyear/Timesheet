@@ -48,6 +48,8 @@ export default function LoginPage() {
             formData.append('username', username);
             formData.append('password', password);
 
+            console.log("Отправляю данные:", formData.toString());
+            alert("Я ОБНОВИЛСЯ!");
             const res = await fetch(TEST_URL, {  // Используем TEST_URL
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
