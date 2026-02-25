@@ -1,2 +1,8 @@
+node_modules/
+__pycache__/
+*.py[cod]
+dist/
 .env
+.venv/
 myenv/
+*.db
